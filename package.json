@@ -1,0 +1,27 @@
+{
+  "name": "snap-line",
+  "version": "1.0.0",
+  "description": "拖动元素, 创建辅助线, 帮助对齐.",
+  "main": "./dist/snapLine.js",
+  "files": [
+    "./dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc ./src/SnapLine.ts --target es5 --module es6 --lib es2017,dom --removeComments --sourceMap --declaration"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PinghuaZhuang/snap-line.git"
+  },
+  "keywords": [
+    "snap-line",
+    "ts"
+  ],
+  "author": "zphua2016@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PinghuaZhuang/snap-line/issues"
+  },
+  "homepage": "https://github.com/PinghuaZhuang/snap-line#readme"
+}
