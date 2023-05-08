@@ -1,4 +1,3 @@
-// tsc .\src\SnapLine.ts --target es5 --module es6 --lib es2017,dom --removeComments --sourceMap --declaration
 interface SnapLineOption {
   /**
    * 小与该间隔, 会自定吸附到辅助线上
@@ -6,16 +5,16 @@ interface SnapLineOption {
    */
   gap?: number;
   /**
-   * @default false
-   */
-  static?: boolean;
-  /**
    * 不设置辅助线默认样式
    */
   noStyle?: boolean;
-  // lines?: ("xt" | "xc" | "xb" | "yl" | "yc" | "yr")[];
-  // lineStyle
+  /**
+   * 要显示的对齐线
+   */
+  lines?: LineKeyType[];
 }
+
+type LineKeyType = 'xt' | 'xc' | 'xb' | 'yl' | 'yc' | 'yr';
 
 interface LineToken {
   handle: {
@@ -90,18 +89,18 @@ const checkConfigs = [
 class SnapLine {
   option: HasDef<SnapLineOption, 'gap' /*  | "lines" */> = {
     gap: 10,
-    // lines: ['xt', 'xb', 'xc', 'yl', 'yr', 'yc'],
+    lines: ['xt', 'xb', 'xc', 'yl', 'yr', 'yc'],
   };
   /**
    * h: 水平线. v: 垂直线
    */
   lines!: {
-    ht: LineToken;
-    hc: LineToken;
-    hb: LineToken;
-    vl: LineToken;
-    vc: LineToken;
-    vr: LineToken;
+    ht?: LineToken;
+    hc?: LineToken;
+    hb?: LineToken;
+    vl?: LineToken;
+    vc?: LineToken;
+    vr?: LineToken;
   };
   /**
    * 对齐线的网格
@@ -117,19 +116,12 @@ class SnapLine {
    * 创建对齐辅助线
    */
   createLines(): typeof this.lines {
-    const lines: Partial<typeof this.lines> = {
-      ht: undefined,
-      hc: undefined,
-      hb: undefined,
-      vl: undefined,
-      vc: undefined,
-      vr: undefined,
-    };
+    const lines: Partial<typeof this.lines> = {};
 
     // 置入参考线
-    for (let p in lines) {
+    this.option.lines!.forEach((lineKey) => {
       const node = document.createElement('div');
-      lines[p as keyof typeof lines] = {
+      lines[lineKey as keyof typeof lines] = {
         handle: {
           show() {
             node.style.display = 'block';
@@ -143,24 +135,24 @@ class SnapLine {
         },
         target: node,
       };
-      node.classList.add('snap-line', `snap-line-${p}`);
-      node.style.cssText = `opacity:0.7;position:absolute;background:#4DAEFF;z-index:1000;pointer-events:none;${
-        p[0] === 'h'
-          ? 'width:100%;height:1px;left:0;transform:translateY(-1px);display:none;'
-          : 'width:1px;height:100%;top:0;transform:translateX(-1px);display:none;'
-      }`;
-      document.body.appendChild(node);
-    }
+      node.classList.add('snap-line', `snap-line-${lineKey}`);
+      if (!this.option.noStyle) {
+        node.style.cssText = `opacity:0.7;position:absolute;background:#4DAEFF;z-index:1000;pointer-events:none;${
+          lineKey[0] === 'h'
+            ? 'width:100%;height:1px;left:0;transform:translateY(-1px);display:none;'
+            : 'width:1px;height:100%;top:0;transform:translateX(-1px);display:none;'
+        }`;
+      }
+      document.body.append(node);
+    });
     return (this.lines = lines as Required<typeof lines>);
   }
 
   /**
-   * 创建对齐线的网格, 可以减少计算量
+   * 创建所有需要对比的所有元素的边界
    */
   generateGrid(
     elementsOrSelect: NodeList | string,
-    sort: boolean = true,
-    // static: boolean = false,
   ): NonUndefined<typeof this.grid> {
     const nodeList = SnapLine.querySelectorAll(elementsOrSelect);
     const grid: typeof this.grid = (this.grid = {
@@ -170,7 +162,6 @@ class SnapLine {
     let max = -Infinity;
     nodeList.forEach((node) => {
       if (!(node instanceof HTMLElement)) {
-        console.log(123);
         return;
       }
       const { top, bottom, left, right, height, width } =
@@ -203,6 +194,9 @@ class SnapLine {
     return grid;
   }
 
+  /**
+   * 检查是否显示对齐线
+   */
   check(dragNode: HTMLElement, elementsOrSelect?: NodeList | string) {
     if (elementsOrSelect == null && this.grid == null) {
       throw new Error(`找不到对齐线`);
@@ -217,7 +211,9 @@ class SnapLine {
         const config = checkConfigs[index];
         o.forEach((condition) => {
           const dragRect = dragNode.getBoundingClientRect();
-          const lineKey = condition.slice(condition.length - 2) as keyof typeof this.lines;
+          const lineKey = condition.slice(
+            condition.length - 2,
+          ) as keyof typeof this.lines;
           const direction =
             condition.charAt(index > 1 ? 1 : 2) === config.comparison;
           const originValue = config.getValue(dragRect, direction);
@@ -234,8 +230,8 @@ class SnapLine {
               // @ts-ignore
               dragNode.style[prop] = `${value}px`;
               // @ts-ignore
-              this.lines[lineKey].target.style[prop] = `${token.value}px`;
-              this.lines[lineKey].handle.show();
+              this.lines[lineKey]!.target.style[prop] = `${token.value}px`;
+              this.lines[lineKey]!.handle.show();
               showLines.push(lineKey);
             });
           }
@@ -252,6 +248,9 @@ class SnapLine {
     }
   }
 
+  /**
+   * 关闭对齐线
+   */
   uncheck() {
     this.grid = null;
     Object.values(this.lines).forEach((item) => item.handle.hide());
@@ -308,19 +307,5 @@ class SnapLine {
     return elementsOrSelect;
   }
 }
-
-// function quickSort(arr: Snaps): Snaps {
-//   if (arr.length <= 1) return arr;
-//   let left: Snaps = [];
-//   let right: Snaps = [];
-//   let middle = arr.splice(Math.floor(arr.length / 2), 1)[0];
-//   let i = 0;
-//   let len = arr.length;
-//   for (; i < len; i++) {
-//     const v = arr[i];
-//     (v.value >= middle.value ? right : left).push(v);
-//   }
-//   return quickSort(left).concat(middle, quickSort(right));
-// }
 
 export default SnapLine;
