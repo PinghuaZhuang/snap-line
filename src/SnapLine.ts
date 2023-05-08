@@ -11,10 +11,22 @@ interface SnapLineOption {
   /**
    * 要显示的对齐线
    */
-  lines?: LineKeyType[];
+  lines?: LineType[];
+  /**
+   * 检查到对齐线的钩子
+   */
+  onSnap?: (
+    snaps: Snaps,
+    /**
+     * {t(top)|b(bottom)|c(center)|l(left)|r(right)} + {LineType}
+     * @example 'bhb', 'thb', 'tht', 'bht', 'tvr', 'bvr', 'bvl', 'tvl', 'chc', 'cvc'
+     */
+    option: string,
+    direction: Direction,
+  ) => void;
 }
 
-type LineKeyType = 'xt' | 'xc' | 'xb' | 'yl' | 'yc' | 'yr';
+type LineType = 'ht' | 'hc' | 'hb' | 'vl' | 'vc' | 'vr';
 
 interface LineToken {
   handle: {
@@ -23,6 +35,7 @@ interface LineToken {
     isShow: () => boolean;
   };
   target: HTMLDivElement;
+  type: LineType;
 }
 
 interface SnapToken {
@@ -30,6 +43,7 @@ interface SnapToken {
   target: HTMLElement;
   value: number;
   direction: Direction;
+  type: LineType;
 }
 
 type NonUndefined<A> = A extends undefined ? never : A;
@@ -46,50 +60,52 @@ type Grid = {
 const checkConfigs = [
   {
     comparison: 't',
-    getValue: (dragRect: DOMRect, direction: boolean) => {
-      return dragRect[direction ? 'top' : 'bottom'];
+    getValue: (dragRect: DOMRect, condition: boolean) => {
+      return dragRect[condition ? 'top' : 'bottom'];
     },
     getStyleProp() {
       return 'top';
     },
-    getStyleValue(dragRect: DOMRect, token: SnapToken, direction: boolean) {
-      return direction ? token.value : token.value - dragRect.height;
+    getStyleValue(dragRect: DOMRect, token: SnapToken, condition: boolean) {
+      return condition ? token.value : token.value - dragRect.height;
     },
   },
   {
     comparison: 'l',
-    getValue(dragRect: DOMRect, direction: boolean) {
-      return dragRect[direction ? 'left' : 'right'];
+    getValue(dragRect: DOMRect, condition: boolean) {
+      return dragRect[condition ? 'left' : 'right'];
     },
     getStyleProp() {
       return 'left';
     },
-    getStyleValue(dragRect: DOMRect, token: SnapToken, direction: boolean) {
-      return direction ? token.value : token.value - dragRect.width;
+    getStyleValue(dragRect: DOMRect, token: SnapToken, condition: boolean) {
+      return condition ? token.value : token.value - dragRect.width;
     },
   },
   {
     comparison: 'h',
-    getValue(dragRect: DOMRect, direction: boolean) {
-      return direction
+    getValue(dragRect: DOMRect, condition: boolean) {
+      return condition
         ? dragRect.top + dragRect.height / 2
         : dragRect.left + dragRect.width / 2;
     },
-    getStyleProp(direction: boolean) {
-      return direction ? 'top' : 'left';
+    getStyleProp(condition: boolean) {
+      return condition ? 'top' : 'left';
     },
-    getStyleValue(dragRect: DOMRect, token: SnapToken, direction: boolean) {
-      return direction
+    getStyleValue(dragRect: DOMRect, token: SnapToken, condition: boolean) {
+      return condition
         ? token.value - dragRect.height / 2
         : token.value - dragRect.width / 2;
     },
   },
 ];
 
+const LINES: LineType[] = ['ht', 'hc', 'hb', 'vl', 'vc', 'vr'];
+
 class SnapLine {
-  option: HasDef<SnapLineOption, 'gap' /*  | "lines" */> = {
-    gap: 10,
-    lines: ['xt', 'xb', 'xc', 'yl', 'yr', 'yc'],
+  option: HasDef<SnapLineOption, 'gap' | 'lines'> = {
+    gap: 3,
+    lines: LINES,
   };
   /**
    * h: 水平线. v: 垂直线
@@ -119,9 +135,9 @@ class SnapLine {
     const lines: Partial<typeof this.lines> = {};
 
     // 置入参考线
-    this.option.lines!.forEach((lineKey) => {
+    this.option.lines!.forEach((lineType) => {
       const node = document.createElement('div');
-      lines[lineKey as keyof typeof lines] = {
+      lines[lineType as keyof typeof lines] = {
         handle: {
           show() {
             node.style.display = 'block';
@@ -134,13 +150,15 @@ class SnapLine {
           },
         },
         target: node,
+        type: lineType,
       };
-      node.classList.add('snap-line', `snap-line-${lineKey}`);
+      node.classList.add('snap-line', `snap-line-${lineType}`);
+      node.dataset.direction = lineType[0];
       if (!this.option.noStyle) {
-        node.style.cssText = `opacity:0.7;position:absolute;background:#4DAEFF;z-index:1000;pointer-events:none;${
-          lineKey[0] === 'h'
-            ? 'width:100%;height:1px;left:0;transform:translateY(-1px);display:none;'
-            : 'width:1px;height:100%;top:0;transform:translateX(-1px);display:none;'
+        node.style.cssText = `display:none;opacity:0.7;position:absolute;background:#4DAEFF;z-index:1000;pointer-events:none;${
+          lineType[0] === 'h'
+            ? 'width:100%;height:1px;left:0;transform:translateY(-1px);'
+            : 'width:1px;height:100%;top:0;transform:translateX(-1px);'
         }`;
       }
       document.body.append(node);
@@ -170,12 +188,12 @@ class SnapLine {
       [
         // h
         top,
-        bottom,
         top + height / 2,
+        bottom,
         // v
         left,
-        right,
         left + width / 2,
+        right,
       ].forEach((value, index) => {
         const direction: Direction = index > 2 ? 'v' : 'h';
         const target = grid[direction];
@@ -187,6 +205,7 @@ class SnapLine {
           target: node,
           value,
           direction,
+          type: LINES[index],
         };
         target.push(token);
       });
@@ -204,37 +223,36 @@ class SnapLine {
     if (elementsOrSelect == null) {
       const showLines: string[] = [];
       [
-        ['bhb', 'thb', 'tht', 'bht'],
-        ['tvr', 'bvr', 'bvl', 'tvl'],
-        ['chc', 'cvc'],
-      ].map((o, index) => {
+        ['hb', 'ht'],
+        ['vr', 'vl'],
+        ['hc', 'vc'],
+      ].map((group, index) => {
         const config = checkConfigs[index];
-        o.forEach((condition) => {
+        group.forEach((o) => {
+          const lineType = o as LineType;
           const dragRect = dragNode.getBoundingClientRect();
-          const lineKey = condition.slice(
-            condition.length - 2,
-          ) as keyof typeof this.lines;
-          const direction =
-            condition.charAt(index > 1 ? 1 : 2) === config.comparison;
-          const originValue = config.getValue(dragRect, direction);
-          const tokens = this.searchNearly(
-            originValue,
-            this.grid![condition.charAt(1) as Direction],
-          );
-          if (tokens) {
-            tokens.forEach((token) => {
-              if (token.target === dragNode || showLines.includes(lineKey))
-                return;
-              const prop = config.getStyleProp(direction);
-              const value = config.getStyleValue(dragRect, token, direction);
-              // @ts-ignore
-              dragNode.style[prop] = `${value}px`;
-              // @ts-ignore
-              this.lines[lineKey]!.target.style[prop] = `${token.value}px`;
-              this.lines[lineKey]!.handle.show();
-              showLines.push(lineKey);
-            });
+          const condition =
+            lineType.charAt(index > 1 ? 0 : 1) === config.comparison;
+          const direction = lineType.charAt(0) as Direction;
+          const originValue = config.getValue(dragRect, condition);
+          let tokens = this.searchNearly(originValue, this.grid![direction]);
+          if (!tokens) return;
+          tokens = tokens.filter((t) => t.target !== dragNode);
+          if (!tokens.length) return;
+          if (this.option.onSnap) {
+            this.option.onSnap(tokens, lineType, direction);
           }
+          tokens.forEach((token) => {
+            if (showLines.includes(lineType)) return;
+            const prop = config.getStyleProp(condition);
+            const value = config.getStyleValue(dragRect, token, condition);
+            // @ts-ignore
+            dragNode.style[prop] = `${value}px`;
+            // @ts-ignore
+            this.lines[lineType]!.target.style[prop] = `${token.value}px`;
+            this.lines[lineType]!.handle.show();
+            showLines.push(lineType);
+          });
         });
       });
 
@@ -259,6 +277,9 @@ class SnapLine {
     );
   }
 
+  /**
+   * 销毁
+   */
   destroy() {
     for (const [_, v] of Object.entries(this.lines)) {
       v.target.remove();

@@ -12,10 +12,32 @@
       position: absolute;
       z-index: 500 !important;
     }
+
+    .custom-snap-line-style .snap-line {
+      transform: translateY(-1px);
+      opacity: 0.7;
+      position: absolute;
+      background-color: #4DAEFF;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+    }
+
+    .custom-snap-line-style .snap-line[data-direction="h"] {
+      width: 100%;
+      height: 1px;
+      left: 0;
+    }
+    .custom-snap-line-style .snap-line[data-direction="v"] {
+      width: 1px;
+      height: 100%;
+      top: 0;
+    }
+
   </style>
 </head>
 
-<body>
+<body class="custom-snap-line-style">
 
   <div class="box" style="top:0; left:0;background: seagreen;"></div>
   <div class="box" style="top:70px; left:0;background: chartreuse;"></div>
@@ -30,7 +52,8 @@
     import RefLine from './src/SnapLine.js';
     let boxes = Array.from(document.querySelectorAll('.box'))
     let refLine = new RefLine({
-      gap: 3,
+      onSnap: console.log,
+      noStyle: true,
     })
     console.log('refLine', refLine);
 

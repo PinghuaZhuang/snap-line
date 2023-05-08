@@ -1,8 +1,10 @@
 interface SnapLineOption {
     gap?: number;
-    static?: boolean;
     noStyle?: boolean;
+    lines?: LineType[];
+    onSnap?: (snaps: Snaps, option: string, direction: Direction) => void;
 }
+type LineType = 'ht' | 'hc' | 'hb' | 'vl' | 'vc' | 'vr';
 interface LineToken {
     handle: {
         show: () => void;
@@ -10,12 +12,14 @@ interface LineToken {
         isShow: () => boolean;
     };
     target: HTMLDivElement;
+    type: LineType;
 }
 interface SnapToken {
     handle: {};
     target: HTMLElement;
     value: number;
     direction: Direction;
+    type: LineType;
 }
 type NonUndefined<A> = A extends undefined ? never : A;
 type HasDef<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
@@ -26,19 +30,19 @@ type Grid = {
     v: Snaps;
 };
 declare class SnapLine {
-    option: HasDef<SnapLineOption, 'gap'>;
+    option: HasDef<SnapLineOption, 'gap' | 'lines'>;
     lines: {
-        ht: LineToken;
-        hc: LineToken;
-        hb: LineToken;
-        vl: LineToken;
-        vc: LineToken;
-        vr: LineToken;
+        ht?: LineToken;
+        hc?: LineToken;
+        hb?: LineToken;
+        vl?: LineToken;
+        vc?: LineToken;
+        vr?: LineToken;
     };
     grid?: Grid | null;
     constructor(option?: SnapLineOption);
     createLines(): typeof this.lines;
-    generateGrid(elementsOrSelect: NodeList | string, sort?: boolean): NonUndefined<typeof this.grid>;
+    generateGrid(elementsOrSelect: NodeList | string): NonUndefined<typeof this.grid>;
     check(dragNode: HTMLElement, elementsOrSelect?: NodeList | string): void;
     uncheck(): void;
     destroy(): void;
