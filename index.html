@@ -12,7 +12,6 @@
       position: absolute;
       z-index: 500 !important;
     }
-
   </style>
 </head>
 
@@ -31,16 +30,17 @@
     import RefLine from './src/SnapLine.js';
     let boxes = Array.from(document.querySelectorAll('.box'))
     let refLine = new RefLine({
-      gap: 10,
+      gap: 3,
     })
     console.log('refLine', refLine);
 
     boxes.forEach((item) => {
       let drag = new Dragify(item)
+      item.innerHTML = window.devicePixelRatio;
 
       drag
         .on('start', () => {
-          // refLine.generateGrid('.box')
+          refLine.generateGrid('.box')
         })
         .on('move', () => {
           refLine.check(drag.$elem, '.box')

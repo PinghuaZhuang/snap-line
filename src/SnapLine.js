@@ -84,13 +84,14 @@ var SnapLine = (function () {
         }
         return (this.lines = lines);
     };
-    SnapLine.prototype.generateGrid = function (elementsOrSelect) {
-        var _this = this;
+    SnapLine.prototype.generateGrid = function (elementsOrSelect, sort) {
+        if (sort === void 0) { sort = true; }
         var nodeList = SnapLine.querySelectorAll(elementsOrSelect);
         var grid = (this.grid = {
-            h: {},
-            v: {},
+            h: [],
+            v: [],
         });
+        var max = -Infinity;
         nodeList.forEach(function (node) {
             if (!(node instanceof HTMLElement)) {
                 console.log(123);
@@ -105,12 +106,23 @@ var SnapLine = (function () {
                 right,
                 left + width / 2,
             ].forEach(function (value, index) {
-                var axies = _this.nearAxis(value);
                 var direction = index > 2 ? 'v' : 'h';
-                axies.forEach(function (axis) {
-                    _generateGrid(axis, value, direction, grid, node);
-                });
+                var target = grid[direction];
+                if (value > max) {
+                    max = value;
+                }
+                var token = {
+                    handle: {},
+                    target: node,
+                    value: value,
+                    direction: direction,
+                };
+                target.push(token);
             });
+            if (sort) {
+                grid.h = quickSort(grid.h);
+                grid.v = quickSort(grid.v);
+            }
         });
         return grid;
     };
@@ -119,14 +131,8 @@ var SnapLine = (function () {
         if (elementsOrSelect == null && this.grid == null) {
             throw new Error("\u627E\u4E0D\u5230\u5BF9\u9F50\u7EBF");
         }
-        Object.entries(this.lines).forEach(function (_a) {
-            var _ = _a[0], lineToken = _a[1];
-            return lineToken.handle.hide();
-        });
-        var dragRect = dragNode.getBoundingClientRect();
         if (elementsOrSelect == null) {
             var showLines_1 = [];
-            var handleMap = {};
             [
                 ['bhb', 'thb', 'tht', 'bht'],
                 ['tvr', 'bvr', 'bvl', 'tvl'],
@@ -134,30 +140,29 @@ var SnapLine = (function () {
             ].map(function (o, index) {
                 var config = checkConfigs[index];
                 o.forEach(function (condition) {
+                    var dragRect = dragNode.getBoundingClientRect();
                     var lineKey = condition.slice(condition.length - 2);
                     var direction = condition.charAt(index > 1 ? 1 : 2) === config.comparison;
                     var originValue = config.getValue(dragRect, direction);
-                    var tokens = _this.isNearlyWithSnaps(originValue, _this.grid[condition.charAt(1)]);
+                    var tokens = _this.searchNearly(originValue, _this.grid[condition.charAt(1)]);
                     if (tokens) {
-                        for (var i in tokens) {
-                            var token = tokens[i];
+                        tokens.forEach(function (token) {
                             if (token.target === dragNode || showLines_1.includes(lineKey))
-                                continue;
+                                return;
                             var prop = config.getStyleProp(direction);
                             var value = config.getStyleValue(dragRect, token, direction);
-                            console.log('value', lineKey, '|', value, token.value, '|', Math.abs(token.value - value), '|', originValue, token, _this.grid.h);
                             dragNode.style[prop] = "".concat(value, "px");
-                            if (Math.abs(token.value - originValue) <= _this.option.gap) {
-                                _this.lines[lineKey].target.style[prop] = "".concat(token.value, "px");
-                                _this.lines[lineKey].handle.show();
-                                showLines_1.push(lineKey);
-                            }
-                            break;
-                        }
+                            _this.lines[lineKey].target.style[prop] = "".concat(token.value, "px");
+                            _this.lines[lineKey].handle.show();
+                            showLines_1.push(lineKey);
+                        });
                     }
                 });
             });
-            console.log('showLines', showLines_1.join(','));
+            Object.entries(this.lines).forEach(function (_a) {
+                var key = _a[0], lineToken = _a[1];
+                !showLines_1.includes(key) && lineToken.handle.hide();
+            });
         }
         else {
             this.generateGrid(elementsOrSelect);
@@ -184,16 +189,22 @@ var SnapLine = (function () {
         if (remainder === 0)
             return [axis - gap, axis, axis + gap];
         var mul = Math.floor(axis / gap);
-        return [mul * gap, (mul + 1) * gap];
+        return [(remainder > gap / 2 ? 1 : 0 + mul) * gap];
     };
     SnapLine.prototype.isNearly = function (dragValue, targetValue) {
         var gap = this.option.gap;
         return Math.abs(dragValue - targetValue) <= gap;
     };
-    SnapLine.prototype.isNearlyWithSnaps = function (dragValue, snaps) {
-        var gap = this.option.gap;
-        var remainder = dragValue % gap;
-        return snaps[(Math.floor(dragValue / gap) + (remainder > gap / 2 ? 1 : 0)) * gap];
+    SnapLine.prototype.searchNearly = function (dragValue, arr) {
+        var i = 0;
+        var len = arr.length;
+        var result = [];
+        for (; i < len; i++) {
+            if (this.isNearly(dragValue, arr[i].value)) {
+                result.push(arr[i]);
+            }
+        }
+        return result;
     };
     SnapLine.querySelectorAll = function (elementsOrSelect) {
         if (typeof elementsOrSelect === 'string') {
@@ -203,37 +214,19 @@ var SnapLine = (function () {
     };
     return SnapLine;
 }());
-function _generateGrid(axis, value, direction, grid, node) {
-    var target = grid[direction][axis];
-    var token = {
-        handle: {},
-        target: node,
-        value: value,
-        axis: axis,
-    };
-    if (target) {
-        target.push(token);
+function quickSort(arr) {
+    if (arr.length <= 1)
+        return arr;
+    var left = [];
+    var right = [];
+    var middle = arr.splice(Math.floor(arr.length / 2), 1)[0];
+    var i = 0;
+    var len = arr.length;
+    for (; i < len; i++) {
+        var v = arr[i];
+        (v.value >= middle.value ? right : left).push(v);
     }
-    else {
-        grid[direction][axis] = [token];
-    }
-}
-function minBy(array, iteratee) {
-    var result = undefined;
-    if (array == null) {
-        return result;
-    }
-    var computed = undefined;
-    for (var _i = 0, array_1 = array; _i < array_1.length; _i++) {
-        var value = array_1[_i];
-        var current = iteratee(value);
-        if (current != null &&
-            (computed === undefined ? current === current : current < computed)) {
-            computed = current;
-            result = value;
-        }
-    }
-    return result;
+    return quickSort(left).concat(middle, quickSort(right));
 }
 export default SnapLine;
 //# sourceMappingURL=SnapLine.js.map
