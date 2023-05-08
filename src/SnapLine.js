@@ -92,7 +92,8 @@ var SnapLine = (function () {
             if (!(node instanceof HTMLElement)) {
                 return;
             }
-            var _a = node.getBoundingClientRect(), top = _a.top, bottom = _a.bottom, left = _a.left, right = _a.right, height = _a.height, width = _a.width;
+            var rect = node.getBoundingClientRect();
+            var top = rect.top, bottom = rect.bottom, left = rect.left, right = rect.right, height = rect.height, width = rect.width;
             [
                 top,
                 top + height / 2,
@@ -112,6 +113,7 @@ var SnapLine = (function () {
                     value: value,
                     direction: direction,
                     type: LINES[index],
+                    rect: rect,
                 };
                 target.push(token);
             });
@@ -144,7 +146,13 @@ var SnapLine = (function () {
                     if (!tokens.length)
                         return;
                     if (_this.option.onSnap) {
-                        _this.option.onSnap(tokens, lineType, direction);
+                        _this.option.onSnap({
+                            snaps: tokens,
+                            direction: direction,
+                            lineType: lineType,
+                            target: dragNode,
+                            targetRect: dragRect,
+                        });
                     }
                     tokens.forEach(function (token) {
                         if (showLines_1.includes(lineType))

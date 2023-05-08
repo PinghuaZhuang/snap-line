@@ -2,7 +2,13 @@ interface SnapLineOption {
     gap?: number;
     noStyle?: boolean;
     lines?: LineType[];
-    onSnap?: (snaps: Snaps, option: string, direction: Direction) => void;
+    onSnap?: (e: {
+        snaps: Snaps;
+        direction: Direction;
+        lineType: LineType;
+        target: HTMLElement;
+        targetRect: DOMRect;
+    }) => void;
 }
 type LineType = 'ht' | 'hc' | 'hb' | 'vl' | 'vc' | 'vr';
 interface LineToken {
@@ -20,6 +26,7 @@ interface SnapToken {
     value: number;
     direction: Direction;
     type: LineType;
+    rect: DOMRect;
 }
 type NonUndefined<A> = A extends undefined ? never : A;
 type HasDef<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;

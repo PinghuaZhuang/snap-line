@@ -15,15 +15,13 @@ interface SnapLineOption {
   /**
    * 检查到对齐线的钩子
    */
-  onSnap?: (
-    snaps: Snaps,
-    /**
-     * {t(top)|b(bottom)|c(center)|l(left)|r(right)} + {LineType}
-     * @example 'bhb', 'thb', 'tht', 'bht', 'tvr', 'bvr', 'bvl', 'tvl', 'chc', 'cvc'
-     */
-    option: string,
-    direction: Direction,
-  ) => void;
+  onSnap?: (e: {
+    snaps: Snaps;
+    direction: Direction;
+    lineType: LineType;
+    target: HTMLElement;
+    targetRect: DOMRect;
+  }) => void;
 }
 
 type LineType = 'ht' | 'hc' | 'hb' | 'vl' | 'vc' | 'vr';
@@ -44,6 +42,7 @@ interface SnapToken {
   value: number;
   direction: Direction;
   type: LineType;
+  rect: DOMRect;
 }
 
 type NonUndefined<A> = A extends undefined ? never : A;
@@ -182,8 +181,8 @@ class SnapLine {
       if (!(node instanceof HTMLElement)) {
         return;
       }
-      const { top, bottom, left, right, height, width } =
-        node.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      const { top, bottom, left, right, height, width } = rect;
 
       [
         // h
@@ -206,6 +205,7 @@ class SnapLine {
           value,
           direction,
           type: LINES[index],
+          rect,
         };
         target.push(token);
       });
@@ -236,12 +236,19 @@ class SnapLine {
           const direction = lineType.charAt(0) as Direction;
           const originValue = config.getValue(dragRect, condition);
           let tokens = this.searchNearly(originValue, this.grid![direction]);
-          if (!tokens) return;
+          if (!tokens) return dragNode.classList.remove(`snap-active`);
           tokens = tokens.filter((t) => t.target !== dragNode);
-          if (!tokens.length) return;
+          if (!tokens.length) return dragNode.classList.remove(`snap-active`);
           if (this.option.onSnap) {
-            this.option.onSnap(tokens, lineType, direction);
+            this.option.onSnap({
+              snaps: tokens,
+              direction,
+              lineType,
+              target: dragNode,
+              targetRect: dragRect,
+            });
           }
+          dragNode.classList.add(`snap-active`);
           tokens.forEach((token) => {
             if (showLines.includes(lineType)) return;
             const prop = config.getStyleProp(condition);

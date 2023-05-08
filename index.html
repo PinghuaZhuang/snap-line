@@ -1,79 +1,174 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RefLine Demo</title>
 
-<head>
-  <meta charset="UTF-8">
-  <title>RefLine Demo</title>
+    <style>
+      .box {
+        width: 50px;
+        height: 50px;
+        position: absolute;
+        z-index: 500 !important;
+      }
 
-  <style>
-    .box {
-      width: 50px;
-      height: 50px;
-      position: absolute;
-      z-index: 500 !important;
-    }
+      .custom-snap-line-style .snap-line {
+        opacity: 0.7;
+        position: absolute;
+        /* background-color: #4DAEFF; */
+        pointer-events: none;
+        z-index: 1000;
+        display: none;
+      }
 
-    .custom-snap-line-style .snap-line {
-      transform: translateY(-1px);
-      opacity: 0.7;
-      position: absolute;
-      background-color: #4DAEFF;
-      pointer-events: none;
-      z-index: 1000;
-      display: none;
-    }
+      .snap-line-guide {
+        width: 100%;
+        height: 100%;
+        background-color: #4daeff;
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-    .custom-snap-line-style .snap-line[data-direction="h"] {
-      width: 100%;
-      height: 1px;
-      left: 0;
-    }
-    .custom-snap-line-style .snap-line[data-direction="v"] {
-      width: 1px;
-      height: 100%;
-      top: 0;
-    }
+      .custom-snap-line-style .snap-line[data-direction='h'] {
+        transform: translateY(-1px);
+        width: 100%;
+        height: 1px;
+        left: 0;
+      }
 
-  </style>
-</head>
+      .custom-snap-line-style .snap-line[data-direction='v'] {
+        transform: translateX(-1px);
+        width: 1px;
+        height: 100%;
+        top: 0;
+      }
+    </style>
+  </head>
 
-<body class="custom-snap-line-style">
+  <body class="custom-snap-line-style">
+    <div class="box" style="top: 0; left: 0; background: seagreen"></div>
+    <div class="box" style="top: 70px; left: 0; background: chartreuse"></div>
+    <div class="box" style="top: 140px; left: 0; background: saddlebrown"></div>
+    <div
+      class="box"
+      style="width: 80px; top: 210px; left: 0; background: salmon"
+    ></div>
+    <div
+      class="box"
+      style="width: 100px; top: 280px; left: 0; background: sandybrown"
+    ></div>
+    <div
+      class="box"
+      style="
+        width: 120px;
+        top: 350px;
+        height: 20px;
+        left: 0;
+        background: skyblue;
+      "
+    ></div>
 
-  <div class="box" style="top:0; left:0;background: seagreen;"></div>
-  <div class="box" style="top:70px; left:0;background: chartreuse;"></div>
-  <div class="box" style="top:140px; left:0;background: saddlebrown;"></div>
-  <div class="box" style="width:80px;top:210px; left:0;background: salmon;"></div>
-  <div class="box" style="width:100px;top:280px; left:0;background: sandybrown;"></div>
-  <div class="box" style="width:120px;top:350px; height: 20px; left:0;background: skyblue;"></div>
+    <script src="./vendors/z-Dragify.js"></script>
+    <script type="module">
+      import RefLine from './src/SnapLine.js';
+      let boxes = Array.from(document.querySelectorAll('.box'));
+      let refLine = new RefLine({
+        onSnap({ snaps: tokens, direction, targetRect, lineType }) {
+          const container = refLine.lines[lineType].target;
+          // container.innerHTML = '';
+          const ds = [];
+          const configs = {
+            h: [
+              {
+                getDistance(token) {
+                  return targetRect.left - token.rect.right;
+                },
+                getPosition(token) {
+                  return token.rect.right;
+                },
+              },
+              {
+                getDistance(token) {
+                  return token.rect.left - targetRect.right;
+                },
+                getPosition(token) {
+                  return targetRect.right;
+                },
+              },
+            ],
+            v: [
+              {
+                getDistance(token) {
+                  return targetRect.top - token.rect.bottom;
+                },
+                getPosition(token) {
+                  return token.rect.bottom;
+                },
+              },
+              {
+                getDistance(token) {
+                  return token.rect.top - targetRect.bottom;
+                },
+                getPosition(token) {
+                  return targetRect.bottom;
+                },
+              },
+            ],
+          };
+          configs[direction].forEach((t, ti) => {
+            let min = Infinity;
+            let token;
+            tokens.forEach((o) => {
+              const distance = t.getDistance(o);
+              if (distance > 0 && distance < min) {
+                min = distance;
+                token = o;
+              }
+            });
+            if (min !== Infinity) {
+              const guideLine =
+                container.querySelector(`[data-direction="${ti}"]`) ??
+                document.createElement('div');
+              guideLine.classList.add('snap-line-guide');
+              guideLine.dataset.direction = ti;
+              guideLine.style[
+                direction === 'h' ? 'width' : 'height'
+              ] = `${min}px`;
+              guideLine.innerHTML = min > 10 ? min : '';
+              guideLine.style[
+                direction === 'h' ? 'left' : 'top'
+              ] = `${t.getPosition(token)}px`;
+              ds.push(ti);
+              container.appendChild(guideLine);
+            }
+          });
+          [0, 1].forEach((o) => {
+            if (!ds.includes(o)) {
+              container.querySelector(`[data-direction="${o}"]`)?.remove();
+            }
+          });
+        },
+        noStyle: true,
+      });
+      console.log('refLine', refLine);
 
+      boxes.forEach((item) => {
+        let drag = new Dragify(item);
+        item.innerHTML = window.devicePixelRatio;
 
-  <script src="./vendors/z-Dragify.js"></script>
-  <script type="module">
-    import RefLine from './src/SnapLine.js';
-    let boxes = Array.from(document.querySelectorAll('.box'))
-    let refLine = new RefLine({
-      onSnap: console.log,
-      noStyle: true,
-    })
-    console.log('refLine', refLine);
-
-    boxes.forEach((item) => {
-      let drag = new Dragify(item)
-      item.innerHTML = window.devicePixelRatio;
-
-      drag
-        .on('start', () => {
-          refLine.generateGrid('.box')
-        })
-        .on('move', () => {
-          refLine.check(drag.$elem, '.box')
-        })
-        .on('end', () => {
-          // refLine.uncheck()
-        })
-    })
-
-  </script>
-</body>
-
+        drag
+          .on('start', () => {
+            refLine.generateGrid('.box');
+          })
+          .on('move', () => {
+            refLine.check(drag.$elem, '.box');
+          })
+          .on('end', () => {
+            // refLine.uncheck()
+          });
+      });
+    </script>
+  </body>
 </html>
