@@ -21,14 +21,31 @@
         display: none;
       }
 
-      .snap-line-guide {
+      .custom-snap-line-style .snap-line-guide {
         width: 100%;
         height: 100%;
-        background-color: #4daeff;
         position: absolute;
+        color: red;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .custom-snap-line-style .snap-line-guide::after {
+        content: attr(data-distance);
+      }
+
+      .custom-snap-line-style .snap-line[data-direction='h'] .snap-line-guide {
+        border-top: 1px dashed #4daeff;
+      }
+      .custom-snap-line-style .snap-line[data-direction='v'] .snap-line-guide {
+        border-left: 1px dashed #4daeff;
+      }
+      .custom-snap-line-style
+        .snap-line[data-direction='v']
+        .snap-line-guide::after {
+        height: 100%;
         display: flex;
         align-items: center;
-        justify-content: center;
       }
 
       .custom-snap-line-style .snap-line[data-direction='h'] {
@@ -75,82 +92,32 @@
       import RefLine from './src/SnapLine.js';
       let boxes = Array.from(document.querySelectorAll('.box'));
       let refLine = new RefLine({
-        onSnap({ snaps: tokens, direction, targetRect, lineType }) {
-          const container = refLine.lines[lineType].target;
-          // container.innerHTML = '';
-          const ds = [];
-          const configs = {
-            h: [
-              {
-                getDistance(token) {
-                  return targetRect.left - token.rect.right;
-                },
-                getPosition(token) {
-                  return token.rect.right;
-                },
-              },
-              {
-                getDistance(token) {
-                  return token.rect.left - targetRect.right;
-                },
-                getPosition(token) {
-                  return targetRect.right;
-                },
-              },
-            ],
-            v: [
-              {
-                getDistance(token) {
-                  return targetRect.top - token.rect.bottom;
-                },
-                getPosition(token) {
-                  return token.rect.bottom;
-                },
-              },
-              {
-                getDistance(token) {
-                  return token.rect.top - targetRect.bottom;
-                },
-                getPosition(token) {
-                  return targetRect.bottom;
-                },
-              },
-            ],
-          };
-          configs[direction].forEach((t, ti) => {
-            let min = Infinity;
-            let token;
-            tokens.forEach((o) => {
-              const distance = t.getDistance(o);
-              if (distance > 0 && distance < min) {
-                min = distance;
-                token = o;
-              }
-            });
-            if (min !== Infinity) {
-              const guideLine =
-                container.querySelector(`[data-direction="${ti}"]`) ??
-                document.createElement('div');
+        onSnap(params) {
+          const { direction, targetRect } = params;
+          const [mins, container] = refLine.nearest(params);
+          mins.forEach(({ distance: min, token, config }, mini) => {
+            let guideLine = container.querySelector(`[data-type="${mini}"]`);
+            const prop = direction === 'h' ? 'width' : 'height';
+            if (!guideLine) {
+              guideLine = document.createElement('div');
               guideLine.classList.add('snap-line-guide');
-              guideLine.dataset.direction = ti;
-              guideLine.style[
-                direction === 'h' ? 'width' : 'height'
-              ] = `${min}px`;
-              guideLine.innerHTML = min > 10 ? min : '';
-              guideLine.style[
-                direction === 'h' ? 'left' : 'top'
-              ] = `${t.getPosition(token)}px`;
-              ds.push(ti);
+              guideLine.dataset.type = mini.toString();
               container.appendChild(guideLine);
             }
-          });
-          [0, 1].forEach((o) => {
-            if (!ds.includes(o)) {
-              container.querySelector(`[data-direction="${o}"]`)?.remove();
+            if (min === Infinity) {
+              guideLine.dataset.distance = '';
+              guideLine.style[prop] = `0px`;
+              return;
             }
+            guideLine.style[prop] = `${min}px`;
+            guideLine.dataset.distance = min > 10 ? min.toString() : '';
+            guideLine.style[
+              direction === 'h' ? 'left' : 'top'
+            ] = `${config.getPosition(token, targetRect)}px`;
           });
         },
         noStyle: true,
+        // lines: ['ht', 'hb', 'vl', 'vr'],
       });
       console.log('refLine', refLine);
 

@@ -13,6 +13,10 @@ interface SnapLineOption {
    */
   lines?: LineType[];
   /**
+   * 元素很多的时候开启提高性能
+   */
+  // performance?: boolean;
+  /**
    * 检查到对齐线的钩子
    */
   onSnap?: (e: {
@@ -98,6 +102,45 @@ const checkConfigs = [
     },
   },
 ];
+
+const nearestConfigs = {
+  h: [
+    {
+      getDistance(token: SnapToken, targetRect: DOMRect) {
+        return targetRect.left - token.rect.right;
+      },
+      getPosition(token: SnapToken, targetRect: DOMRect) {
+        return token.rect.right;
+      },
+    },
+    {
+      getDistance(token: SnapToken, targetRect: DOMRect) {
+        return token.rect.left - targetRect.right;
+      },
+      getPosition(token: SnapToken, targetRect: DOMRect) {
+        return targetRect.right;
+      },
+    },
+  ],
+  v: [
+    {
+      getDistance(token: SnapToken, targetRect: DOMRect) {
+        return targetRect.top - token.rect.bottom;
+      },
+      getPosition(token: SnapToken, targetRect: DOMRect) {
+        return token.rect.bottom;
+      },
+    },
+    {
+      getDistance(token: SnapToken, targetRect: DOMRect) {
+        return token.rect.top - targetRect.bottom;
+      },
+      getPosition(token: SnapToken, targetRect: DOMRect) {
+        return targetRect.bottom;
+      },
+    },
+  ],
+};
 
 const LINES: LineType[] = ['ht', 'hc', 'hb', 'vl', 'vc', 'vr'];
 
@@ -253,11 +296,13 @@ class SnapLine {
             if (showLines.includes(lineType)) return;
             const prop = config.getStyleProp(condition);
             const value = config.getStyleValue(dragRect, token, condition);
+            const line = this.lines[lineType];
+            if (line == null) return;
             // @ts-ignore
             dragNode.style[prop] = `${value}px`;
             // @ts-ignore
-            this.lines[lineType]!.target.style[prop] = `${token.value}px`;
-            this.lines[lineType]!.handle.show();
+            line!.target.style[prop] = `${token.value}px`;
+            line!.handle.show();
             showLines.push(lineType);
           });
         });
@@ -295,14 +340,39 @@ class SnapLine {
   }
 
   /**
-   * 获取最近的轴线
+   * 最近的点
    */
-  nearAxis(axis: number) {
-    const { gap } = this.option;
-    const remainder = axis % gap;
-    if (remainder === 0) return [axis - gap, axis, axis + gap];
-    const mul = Math.floor(axis / gap);
-    return [(remainder > gap / 2 ? 1 : 0 + mul) * gap];
+  nearest({
+    snaps: tokens,
+    direction,
+    targetRect,
+    lineType,
+  }: {
+    snaps: Snaps;
+    direction: Direction;
+    lineType: LineType;
+    target: HTMLElement;
+    targetRect: DOMRect;
+  }) {
+    const container = this.lines[lineType]?.target;
+    if (container == null) return;
+    let mins: {
+      distance: number;
+      token: SnapToken | null;
+      config: (typeof nearestConfigs.h)[0] | null;
+    }[] = [
+      { distance: Infinity, token: null, config: null },
+      { distance: Infinity, token: null, config: null },
+    ];
+    tokens.forEach((token) => {
+      nearestConfigs[direction].forEach((t, ti) => {
+        const distance = t.getDistance(token, targetRect);
+        if (distance > 0 && distance < mins[ti].distance) {
+          mins[ti] = { distance, token, config: t };
+        }
+      });
+    });
+    return [mins, container];
   }
 
   /**

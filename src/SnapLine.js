@@ -40,6 +40,44 @@ var checkConfigs = [
         },
     },
 ];
+var nearestConfigs = {
+    h: [
+        {
+            getDistance: function (token, targetRect) {
+                return targetRect.left - token.rect.right;
+            },
+            getPosition: function (token, targetRect) {
+                return token.rect.right;
+            },
+        },
+        {
+            getDistance: function (token, targetRect) {
+                return token.rect.left - targetRect.right;
+            },
+            getPosition: function (token, targetRect) {
+                return targetRect.right;
+            },
+        },
+    ],
+    v: [
+        {
+            getDistance: function (token, targetRect) {
+                return targetRect.top - token.rect.bottom;
+            },
+            getPosition: function (token, targetRect) {
+                return token.rect.bottom;
+            },
+        },
+        {
+            getDistance: function (token, targetRect) {
+                return token.rect.top - targetRect.bottom;
+            },
+            getPosition: function (token, targetRect) {
+                return targetRect.bottom;
+            },
+        },
+    ],
+};
 var LINES = ['ht', 'hc', 'hb', 'vl', 'vc', 'vr'];
 var SnapLine = (function () {
     function SnapLine(option) {
@@ -141,10 +179,10 @@ var SnapLine = (function () {
                     var originValue = config.getValue(dragRect, condition);
                     var tokens = _this.searchNearly(originValue, _this.grid[direction]);
                     if (!tokens)
-                        return;
+                        return dragNode.classList.remove("snap-active");
                     tokens = tokens.filter(function (t) { return t.target !== dragNode; });
                     if (!tokens.length)
-                        return;
+                        return dragNode.classList.remove("snap-active");
                     if (_this.option.onSnap) {
                         _this.option.onSnap({
                             snaps: tokens,
@@ -154,14 +192,18 @@ var SnapLine = (function () {
                             targetRect: dragRect,
                         });
                     }
+                    dragNode.classList.add("snap-active");
                     tokens.forEach(function (token) {
                         if (showLines_1.includes(lineType))
                             return;
                         var prop = config.getStyleProp(condition);
                         var value = config.getStyleValue(dragRect, token, condition);
+                        var line = _this.lines[lineType];
+                        if (line == null)
+                            return;
                         dragNode.style[prop] = "".concat(value, "px");
-                        _this.lines[lineType].target.style[prop] = "".concat(token.value, "px");
-                        _this.lines[lineType].handle.show();
+                        line.target.style[prop] = "".concat(token.value, "px");
+                        line.handle.show();
                         showLines_1.push(lineType);
                     });
                 });
@@ -190,13 +232,25 @@ var SnapLine = (function () {
         }
         this.uncheck();
     };
-    SnapLine.prototype.nearAxis = function (axis) {
-        var gap = this.option.gap;
-        var remainder = axis % gap;
-        if (remainder === 0)
-            return [axis - gap, axis, axis + gap];
-        var mul = Math.floor(axis / gap);
-        return [(remainder > gap / 2 ? 1 : 0 + mul) * gap];
+    SnapLine.prototype.nearest = function (_a) {
+        var _b;
+        var tokens = _a.snaps, direction = _a.direction, targetRect = _a.targetRect, lineType = _a.lineType;
+        var container = (_b = this.lines[lineType]) === null || _b === void 0 ? void 0 : _b.target;
+        if (container == null)
+            return;
+        var mins = [
+            { distance: Infinity, token: null, config: null },
+            { distance: Infinity, token: null, config: null },
+        ];
+        tokens.forEach(function (token) {
+            nearestConfigs[direction].forEach(function (t, ti) {
+                var distance = t.getDistance(token, targetRect);
+                if (distance > 0 && distance < mins[ti].distance) {
+                    mins[ti] = { distance: distance, token: token, config: t };
+                }
+            });
+        });
+        return [mins, container];
     };
     SnapLine.prototype.isNearly = function (dragValue, targetValue) {
         var gap = this.option.gap;

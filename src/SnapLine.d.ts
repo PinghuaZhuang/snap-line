@@ -36,6 +36,16 @@ type Grid = {
     h: Snaps;
     v: Snaps;
 };
+declare const nearestConfigs: {
+    h: {
+        getDistance(token: SnapToken, targetRect: DOMRect): number;
+        getPosition(token: SnapToken, targetRect: DOMRect): number;
+    }[];
+    v: {
+        getDistance(token: SnapToken, targetRect: DOMRect): number;
+        getPosition(token: SnapToken, targetRect: DOMRect): number;
+    }[];
+};
 declare class SnapLine {
     option: HasDef<SnapLineOption, 'gap' | 'lines'>;
     lines: {
@@ -53,7 +63,17 @@ declare class SnapLine {
     check(dragNode: HTMLElement, elementsOrSelect?: NodeList | string): void;
     uncheck(): void;
     destroy(): void;
-    nearAxis(axis: number): number[];
+    nearest({ snaps: tokens, direction, targetRect, lineType, }: {
+        snaps: Snaps;
+        direction: Direction;
+        lineType: LineType;
+        target: HTMLElement;
+        targetRect: DOMRect;
+    }): (HTMLDivElement | {
+        distance: number;
+        token: SnapToken | null;
+        config: (typeof nearestConfigs.h)[0] | null;
+    }[])[];
     isNearly(dragValue: number, targetValue: number): boolean;
     searchNearly(dragValue: number, arr: Snaps): Snaps;
     static querySelectorAll(elementsOrSelect: NodeList | string): NodeList;
