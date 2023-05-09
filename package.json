@@ -8,7 +8,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc ./src/SnapLine.ts --target es5 --module es6 --lib es2017,dom --removeComments --sourceMap --declaration"
+    "build": "tsc ./src/SnapLine.ts --target es5 --module es6 --lib es2017,dom --removeComments --sourceMap --declaration --outDir dist",
+    "build:example": "tsc ./src/SnapLine.ts --target es5 --module es6 --lib es2017,dom --removeComments --sourceMap --declaration --outDir example"
   },
   "repository": {
     "type": "git",

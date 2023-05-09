@@ -2,7 +2,7 @@
 <html lang="zh-cn">
   <head>
     <meta charset="UTF-8" />
-    <title>RefLine Demo</title>
+    <title>SnapLine Demo</title>
 
     <style>
       .box {
@@ -12,16 +12,29 @@
         z-index: 500 !important;
       }
 
-      .custom-snap-line-style .snap-line {
+      .snap-line {
         opacity: 0.7;
         position: absolute;
-        /* background-color: #4DAEFF; */
         pointer-events: none;
         z-index: 1000;
         display: none;
       }
 
-      .custom-snap-line-style .snap-line-guide {
+      .snap-line[data-direction='h'] {
+        transform: translateY(-1px);
+        width: 100%;
+        height: 1px;
+        left: 0;
+      }
+
+      .snap-line[data-direction='v'] {
+        transform: translateX(-1px);
+        width: 1px;
+        height: 100%;
+        top: 0;
+      }
+
+      .snap-line-guide {
         width: 100%;
         height: 100%;
         position: absolute;
@@ -30,41 +43,25 @@
         font-size: 12px;
       }
 
-      .custom-snap-line-style .snap-line-guide::after {
+      .snap-line-guide::after {
         content: attr(data-distance);
       }
 
-      .custom-snap-line-style .snap-line[data-direction='h'] .snap-line-guide {
+      .snap-line[data-direction='h'] .snap-line-guide {
         border-top: 1px dashed #4daeff;
       }
-      .custom-snap-line-style .snap-line[data-direction='v'] .snap-line-guide {
+      .snap-line[data-direction='v'] .snap-line-guide {
         border-left: 1px dashed #4daeff;
       }
-      .custom-snap-line-style
-        .snap-line[data-direction='v']
-        .snap-line-guide::after {
+      .snap-line[data-direction='v'] .snap-line-guide::after {
         height: 100%;
         display: flex;
         align-items: center;
       }
-
-      .custom-snap-line-style .snap-line[data-direction='h'] {
-        transform: translateY(-1px);
-        width: 100%;
-        height: 1px;
-        left: 0;
-      }
-
-      .custom-snap-line-style .snap-line[data-direction='v'] {
-        transform: translateX(-1px);
-        width: 1px;
-        height: 100%;
-        top: 0;
-      }
     </style>
   </head>
 
-  <body class="custom-snap-line-style">
+  <body>
     <div class="box" style="top: 0; left: 0; background: seagreen"></div>
     <div class="box" style="top: 70px; left: 0; background: chartreuse"></div>
     <div class="box" style="top: 140px; left: 0; background: saddlebrown"></div>
@@ -89,12 +86,12 @@
 
     <script src="./vendors/z-Dragify.js"></script>
     <script type="module">
-      import RefLine from './src/SnapLine.js';
+      import SnapLine from './SnapLine.js';
       let boxes = Array.from(document.querySelectorAll('.box'));
-      let refLine = new RefLine({
+      let snap = new SnapLine({
         onSnap(params) {
           const { direction, targetRect } = params;
-          const [mins, container] = refLine.nearest(params);
+          const [mins, container] = snap.nearest(params);
           mins.forEach(({ distance: min, token, config }, mini) => {
             let guideLine = container.querySelector(`[data-type="${mini}"]`);
             const prop = direction === 'h' ? 'width' : 'height';
@@ -117,9 +114,7 @@
           });
         },
         noStyle: true,
-        // lines: ['ht', 'hb', 'vl', 'vr'],
       });
-      console.log('refLine', refLine);
 
       boxes.forEach((item) => {
         let drag = new Dragify(item);
@@ -127,13 +122,13 @@
 
         drag
           .on('start', () => {
-            refLine.generateGrid('.box');
+            snap.generateGrid('.box');
           })
           .on('move', () => {
-            refLine.check(drag.$elem, '.box');
+            snap.check(drag.$elem, '.box');
           })
           .on('end', () => {
-            // refLine.uncheck()
+            snap.uncheck();
           });
       });
     </script>
