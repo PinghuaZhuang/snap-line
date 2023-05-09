@@ -7,7 +7,7 @@
 
 ## Example
 
-[LiveDemo](TODO)
+[LiveDemo](https://pinghuazhuang.github.io/snap-line/)
 
 ## 🚀 Quick Start
 
@@ -132,6 +132,3 @@ boxes.forEach((item) => {
   align-items: center;
 }
 ```
-
-
-

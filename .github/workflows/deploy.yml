@@ -24,6 +24,6 @@ jobs:
         with:
           repository-name: PinghuaZhuang/PingHuaZhuang.github.io
           branch: master
-          folder: snap-line
-          target-folder: '@zstark/permission-table'
+          folder: example
+          target-folder: 'snap-line'
           token: ${{ secrets.TOKEN }}
