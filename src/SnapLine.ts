@@ -1,7 +1,7 @@
 interface SnapLineOption {
   /**
    * 小与该间隔, 会自定吸附到辅助线上
-   * @default 10
+   * @default 3
    */
   gap?: number;
   /**
@@ -12,10 +12,6 @@ interface SnapLineOption {
    * 要显示的对齐线
    */
   lines?: LineType[];
-  /**
-   * 元素很多的时候开启提高性能
-   */
-  // performance?: boolean;
   /**
    * 检查到对齐线的钩子
    */
@@ -264,6 +260,7 @@ class SnapLine {
       throw new Error(`找不到对齐线`);
     }
     if (elementsOrSelect == null) {
+      let dragRect = dragNode.getBoundingClientRect();
       const showLines: string[] = [];
       [
         ['hb', 'ht'],
@@ -273,7 +270,6 @@ class SnapLine {
         const config = checkConfigs[index];
         group.forEach((o) => {
           const lineType = o as LineType;
-          const dragRect = dragNode.getBoundingClientRect();
           const condition =
             lineType.charAt(index > 1 ? 0 : 1) === config.comparison;
           const direction = lineType.charAt(0) as Direction;
@@ -283,13 +279,15 @@ class SnapLine {
           tokens = tokens.filter((t) => t.target !== dragNode);
           if (!tokens.length) return dragNode.classList.remove(`snap-active`);
           if (this.option.onSnap) {
-            this.option.onSnap({
-              snaps: tokens,
-              direction,
-              lineType,
-              target: dragNode,
-              targetRect: dragRect,
-            });
+            setTimeout(() => {
+              this.option.onSnap!({
+                snaps: tokens,
+                direction,
+                lineType,
+                target: dragNode,
+                targetRect: dragRect,
+              });
+            }, 1);
           }
           dragNode.classList.add(`snap-active`);
           tokens.forEach((token) => {
@@ -300,6 +298,7 @@ class SnapLine {
             if (line == null) return;
             // @ts-ignore
             dragNode.style[prop] = `${value}px`;
+            dragRect = dragNode.getBoundingClientRect();
             // @ts-ignore
             line!.target.style[prop] = `${token.value}px`;
             line!.handle.show();
