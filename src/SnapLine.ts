@@ -1,6 +1,6 @@
 interface SnapLineOption {
   /**
-   * 小与该间隔, 会自定吸附到辅助线上
+   * 最小间隔, 会自定吸附到辅助线上
    * @default 3
    */
   gap?: number;

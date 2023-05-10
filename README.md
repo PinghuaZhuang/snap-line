@@ -5,9 +5,43 @@
 
 ![](./assets/snapline_example.gif)
 
+## TODO
+- [ ] 打包UMD.
+- [ ] 发布包.
+
 ## Example
 
 [LiveDemo](https://pinghuazhuang.github.io/snap-line/)
+
+## Option
+
+```ts
+interface SnapLineOption {
+  /**
+   * 最小间隔, 会自定吸附到辅助线上
+   * @default 3
+   */
+  gap?: number;
+  /**
+   * 不设置辅助线默认样式
+   */
+  noStyle?: boolean;
+  /**
+   * 要显示的对齐线
+   */
+  lines?: LineType[];
+  /**
+   * 检查到对齐线的钩子
+   */
+  onSnap?: (e: {
+    snaps: Snaps;
+    direction: Direction;
+    lineType: LineType;
+    target: HTMLElement;
+    targetRect: DOMRect;
+  }) => void;
+}
+```
 
 ## 🚀 Quick Start
 
@@ -32,36 +66,6 @@ boxes.forEach((item) => {
       snap.uncheck();
     });
 });
-```
-
-## Option
-
-```ts
-interface SnapLineOption {
-  /**
-   * 小与该间隔, 会自定吸附到辅助线上
-   * @default 3
-   */
-  gap?: number;
-  /**
-   * 不设置辅助线默认样式
-   */
-  noStyle?: boolean;
-  /**
-   * 要显示的对齐线
-   */
-  lines?: LineType[];
-  /**
-   * 检查到对齐线的钩子
-   */
-  onSnap?: (e: {
-    snaps: Snaps;
-    direction: Direction;
-    lineType: LineType;
-    target: HTMLElement;
-    targetRect: DOMRect;
-  }) => void;
-}
 ```
 
 ### 创建带有标尺
